@@ -2,9 +2,7 @@
 #include <stdbool.h>
 #include "tm4c123gh6pm.h"
 
-//A 100kHz PWM varying duty cycle waveform on Pin PF2; controlled by Module 1 PWM Generator 3 A.
-//SW2 for duty cycle increase and SW1 for decrease
-//Interrupt Handlers
+
 void GPIOFHandler(void);
 void SysTickHandler(void){}
 
@@ -69,4 +67,40 @@ void main(void)
     }
 }
 
+void Portf_interrupt_handler(void)
+{
+    GPIO_PORTF_IM_R &= ~0x11;
+
+           if(GPIO_PORTF_RIS_R & 0x10)   //switch_2
+           {
+               if (duty < 90)
+                      {
+                          duty = duty + 5;
+                      }
+               if (duty >= 90){
+                   duty = 90;
+               }
+           }
+           if (GPIO_PORTF_RIS_R & 0x01)    //switch_1
+           {
+               if (duty > 5)
+                      {
+                          duty = duty - 5;
+                      }
+               if (duty <= 5){
+                   duty = 5;
+               }
+           }
+           if (GPIO_PORTF_RIS_R & 0x11)    //Both switches pressed at a time
+           {
+               duty = duty;
+           }
+           PWM1_3_CMPA_R = (160 * duty) / 100;
+
+    int wait;
+    for(wait = 0; wait <1600*1000/4; wait++){}           //Debounce Delay of 0.25seconds
+
+    GPIO_PORTF_ICR_R = 0x11;
+    GPIO_PORTF_IM_R |= 0x11;
+}
 
